@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from common.gismo import DEFAULT_GISMO_CATALOG, DEFAULT_GISMO_SCHEMA, GOLD_TABLES
 from databricks.sdk import WorkspaceClient
+from dbx_tools import clients
 from lfp_logging import logs
 
 # Creates or updates a GISMO Genie space for curated gold tables.
@@ -69,9 +70,11 @@ def _payload(args: argparse.Namespace) -> dict[str, object]:
 def main() -> None:
     args = _parse_args()
     workspace_client = WorkspaceClient()
+    warehouse_id = args.warehouse_id or str(clients.warehouse(workspace_client).id)
     existing_space_id = _find_existing_space_id(
         workspace_client=workspace_client, display_name=GENIE_DISPLAY_NAME
     )
+    args.warehouse_id = warehouse_id
     payload = _payload(args)
 
     if existing_space_id:

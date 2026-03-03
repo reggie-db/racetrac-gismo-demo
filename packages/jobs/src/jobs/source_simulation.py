@@ -8,6 +8,7 @@ from common.gismo import (
     source_system_case_sql,
 )
 from databricks.sdk import WorkspaceClient
+from dbx_tools import clients
 from lfp_logging import logs
 
 # Creates synthetic source-system events used by the GISMO pipeline.
@@ -38,8 +39,6 @@ def _parse_args() -> SimulationConfig:
     )
     parser.add_argument("--row-count", type=int, default=960)
     args = parser.parse_args()
-    if not args.warehouse_id:
-        raise ValueError("DATABRICKS_WAREHOUSE_ID or --warehouse-id is required.")
     if args.row_count <= 0:
         raise ValueError("--row-count must be greater than zero.")
     return SimulationConfig(
@@ -138,19 +137,20 @@ FROM range(0, {row_count})
 def main() -> None:
     config = _parse_args()
     workspace_client = WorkspaceClient()
+    warehouse_id = config.warehouse_id or str(clients.warehouse(workspace_client).id)
     _statement_ok(
         workspace_client=workspace_client,
-        warehouse_id=config.warehouse_id,
+        warehouse_id=warehouse_id,
         statement=f"CREATE SCHEMA IF NOT EXISTS `{config.catalog}`.`{config.schema}`",
     )
     _statement_ok(
         workspace_client=workspace_client,
-        warehouse_id=config.warehouse_id,
+        warehouse_id=warehouse_id,
         statement=_create_source_table_sql(config.catalog, config.schema),
     )
     _statement_ok(
         workspace_client=workspace_client,
-        warehouse_id=config.warehouse_id,
+        warehouse_id=warehouse_id,
         statement=_insert_source_rows_sql(
             config.catalog, config.schema, config.row_count
         ),

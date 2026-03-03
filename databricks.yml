@@ -4,6 +4,7 @@ bundle:
 include:
   - resources/*.yml
 
+
 artifacts:
   python_artifact:
     type: whl
@@ -15,7 +16,8 @@ variables:
   schema:
     default: racetrac_gismo
   warehouse_id:
-    default: "148ccb90800933a1"
+    lookup:
+      warehouse: Shared Endpoint
   lakebase_schema:
     default: racetrac_gismo_serving
   pipeline_name:
@@ -36,4 +38,3 @@ targets:
     variables:
       catalog: reggie_pierce
       schema: racetrac_gismo
-      warehouse_id: "148ccb90800933a1"

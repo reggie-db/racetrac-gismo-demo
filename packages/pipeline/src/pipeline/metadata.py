@@ -4,6 +4,7 @@ from collections.abc import Iterable, Sequence
 
 from common.gismo import DEFAULT_GISMO_CATALOG, DEFAULT_GISMO_SCHEMA
 from databricks.sdk import WorkspaceClient
+from dbx_tools import clients
 from lfp_logging import logs
 
 from pipeline.constants import BRONZE_TABLES, GOLD_TABLES, SILVER_TABLES
@@ -261,14 +262,12 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
-    if not args.warehouse_id:
-        raise ValueError("DATABRICKS_WAREHOUSE_ID or --warehouse-id is required.")
-
     workspace_client = WorkspaceClient()
+    warehouse_id = args.warehouse_id or str(clients.warehouse(workspace_client).id)
     statements = _build_comment_sql(catalog=args.catalog, schema=args.schema)
     _run_sql_statements(
         workspace_client=workspace_client,
-        warehouse_id=args.warehouse_id,
+        warehouse_id=warehouse_id,
         statements=statements,
     )
     LOG.info("Applied metadata comments for GISMO tables.")

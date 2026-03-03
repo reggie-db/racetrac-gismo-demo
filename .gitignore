@@ -1,0 +1,223 @@
+# =========================================================
+# Python Artifacts
+# =========================================================
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# =========================================================
+# Build / Distribution
+# =========================================================
+
+build/
+dist/
+.eggs/
+develop-eggs/
+downloads/
+eggs/
+sdist/
+parts/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+*.manifest
+*.spec
+
+# =========================================================
+# Virtual Environments
+# =========================================================
+
+.env
+.envrc
+.venv
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+.pixi/*
+!.pixi/config.toml
+
+.pdm-build/
+.pdm-python
+
+__pypackages__/
+
+# =========================================================
+# Testing / Coverage / Type Checking
+# =========================================================
+
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+cover/
+
+# =========================================================
+# Logs
+# =========================================================
+
+*.log
+*.log.*
+nohup.out
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =========================================================
+# Local Databases / Runtime
+# =========================================================
+
+*.db
+db.sqlite3
+db.sqlite3-journal
+instance/
+local_settings.py
+
+# =========================================================
+# Notebooks / Interactive
+# =========================================================
+
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+*.sage.py
+
+# =========================================================
+# Documentation Builds
+# =========================================================
+
+docs/_build/
+/site
+
+# =========================================================
+# Node / Frontend / Vaadin
+# =========================================================
+
+node_modules/
+pnpmfile.js
+webpack.generated.js
+drivers/
+error-screenshots/
+**/frontend/generated
+
+# =========================================================
+# IntelliJ / JetBrains (Vendor Recommended)
+# =========================================================
+
+.idea/*
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/runConfigurations/
+!.idea/misc.xml
+!.idea/modules.xml
+
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/shelf/
+.idea/dictionaries/
+
+*.iml
+*.ipr
+*.iws
+out/
+idea.log
+.idea_modules/
+
+# =========================================================
+# VS Code (Vendor Recommended)
+# =========================================================
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+.history/
+*.code-workspace
+
+# =========================================================
+# Cursor (Vendor Recommended)
+# =========================================================
+
+.cursor/*
+!.cursor/settings.json
+!.cursor/tasks.json
+!.cursor/launch.json
+
+.cursorignore
+.cursorindexingignore
+
+# =========================================================
+# OS Files
+# =========================================================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+.Icon
+.Spotlight-V100
+.Trashes
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+*~
+
+# =========================================================
+# Tool Specific / Misc
+# =========================================================
+
+.scrapy
+.webassets-cache
+.pybuilder/
+celerybeat-schedule
+celerybeat.pid
+cython_debug/
+.abstra/
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+.spyderproject
+.spyproject
+.ropeproject
+.pypirc
+
+# =========================================================
+# Project / Generated / Dev Specific
+# =========================================================
+
+.states
+.web
+assets/external/
+
+*.tmp
+*.temp
+prpr/
+*.proto
+*_pb2.py
+
+**/.dev
+**/.dev.*
