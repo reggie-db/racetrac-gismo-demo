@@ -35,7 +35,6 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--schema", default=os.getenv("GISMO_SCHEMA", DEFAULT_GISMO_SCHEMA)
     )
-    parser.add_argument("--warehouse-id", default=os.getenv("DATABRICKS_WAREHOUSE_ID"))
     return parser.parse_args()
 
 
@@ -62,20 +61,18 @@ def _payload(args: argparse.Namespace) -> dict[str, object]:
         ),
         "sample_questions": list(GENIE_SAMPLE_QUESTIONS),
     }
-    if args.warehouse_id:
-        payload["warehouse_id"] = args.warehouse_id
     return payload
 
 
 def main() -> None:
     args = _parse_args()
     workspace_client = WorkspaceClient()
-    warehouse_id = args.warehouse_id or str(clients.warehouse(workspace_client).id)
+    warehouse_id = str(clients.warehouse(workspace_client).id)
     existing_space_id = _find_existing_space_id(
         workspace_client=workspace_client, display_name=GENIE_DISPLAY_NAME
     )
-    args.warehouse_id = warehouse_id
     payload = _payload(args)
+    payload["warehouse_id"] = warehouse_id
 
     if existing_space_id:
         workspace_client.api_client.do(

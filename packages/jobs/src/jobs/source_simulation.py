@@ -20,7 +20,6 @@ LOG = logs.logger()
 class SimulationConfig:
     catalog: str
     schema: str
-    warehouse_id: str
     row_count: int
 
 
@@ -34,9 +33,6 @@ def _parse_args() -> SimulationConfig:
     parser.add_argument(
         "--schema", default=os.getenv("GISMO_SCHEMA", DEFAULT_GISMO_SCHEMA)
     )
-    parser.add_argument(
-        "--warehouse-id", default=os.getenv("DATABRICKS_WAREHOUSE_ID", "")
-    )
     parser.add_argument("--row-count", type=int, default=960)
     args = parser.parse_args()
     if args.row_count <= 0:
@@ -44,7 +40,6 @@ def _parse_args() -> SimulationConfig:
     return SimulationConfig(
         catalog=args.catalog,
         schema=args.schema,
-        warehouse_id=args.warehouse_id,
         row_count=args.row_count,
     )
 
@@ -55,7 +50,7 @@ def _statement_ok(
     response = workspace_client.statement_execution.execute_statement(
         warehouse_id=warehouse_id,
         statement=statement,
-        wait_timeout="90s",
+        wait_timeout="50s",
     )
     state = (
         response.status.state.value
@@ -112,7 +107,7 @@ INSERT INTO `{catalog}`.`{schema}`.`source_operational_signals`
 SELECT
   id,
   {source_system_case} AS source_system,
-  current_timestamp() - INTERVAL CAST(id % 72 AS INT) HOURS AS signal_timestamp,
+  timestampadd(HOUR, -CAST(id % 72 AS INT), current_timestamp()) AS signal_timestamp,
   concat('MKT-', lpad(cast(id % 24 AS STRING), 2, '0')) AS market_key,
   concat('TRM-', lpad(cast(id % 18 AS STRING), 3, '0')) AS terminal_id,
   concat('PRD-', lpad(cast(id % 8 AS STRING), 2, '0')) AS product_id,
@@ -137,7 +132,7 @@ FROM range(0, {row_count})
 def main() -> None:
     config = _parse_args()
     workspace_client = WorkspaceClient()
-    warehouse_id = config.warehouse_id or str(clients.warehouse(workspace_client).id)
+    warehouse_id = str(clients.warehouse(workspace_client).id)
     _statement_ok(
         workspace_client=workspace_client,
         warehouse_id=warehouse_id,

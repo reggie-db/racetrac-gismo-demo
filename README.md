@@ -103,7 +103,7 @@ pixi run deploy-genie
 Generate synthetic source-system rows locally with:
 
 ```bash
-pixi run generate-source-data -- --warehouse-id <warehouse-id>
+pixi run generate-source-data
 ```
 
 Deploy the gold-layer dashboard with:

@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Databricks CLI authenticated with profile `DEFAULT`.
-- SQL warehouse available and `DATABRICKS_WAREHOUSE_ID` known.
+- SQL warehouse access for the active identity.
 - Lakebase DSN available as `LAKEBASE_DSN`.
 
 ## 1) Build Artifact

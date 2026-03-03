@@ -10,13 +10,13 @@ resources:
       edition: ADVANCED
       development: true
       libraries:
-        - glob:
-            include: ../packages/pipeline/src/pipeline/**
+        - file:
+            path: ../packages/pipeline/src/pipeline/lakeflow_pipeline.py
       environment:
         dependencies:
           # We include every dependency defined by pyproject.toml by defining an editable environment
           # that points to the folder where pyproject.toml is deployed.
-          - --editable ${workspace.file_path}
+          - ${workspace.root_path}/artifacts/.internal/*.whl
       configuration:
         gismo.catalog: ${var.catalog}
         gismo.schema: ${var.schema}

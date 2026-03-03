@@ -228,7 +228,7 @@ def _run_sql_statements(
         result = workspace_client.statement_execution.execute_statement(
             warehouse_id=warehouse_id,
             statement=statement,
-            wait_timeout="60s",
+            wait_timeout="50s",
         )
         state = (
             result.status.state.value
@@ -256,14 +256,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--schema", default=os.getenv("GISMO_SCHEMA", DEFAULT_GISMO_SCHEMA)
     )
-    parser.add_argument("--warehouse-id", default=os.getenv("DATABRICKS_WAREHOUSE_ID"))
     return parser.parse_args()
 
 
 def main() -> None:
     args = _parse_args()
     workspace_client = WorkspaceClient()
-    warehouse_id = args.warehouse_id or str(clients.warehouse(workspace_client).id)
+    warehouse_id = str(clients.warehouse(workspace_client).id)
     statements = _build_comment_sql(catalog=args.catalog, schema=args.schema)
     _run_sql_statements(
         workspace_client=workspace_client,
