@@ -40,7 +40,9 @@ GOLD_TABLES: Sequence[str] = (
 
 
 def source_system_case_sql(index_expression: str = "id % 12") -> str:
-    case_lines = [f"WHEN {idx} THEN '{source}'" for idx, source in enumerate(SOURCE_SYSTEMS[:-1])]
+    case_lines = [
+        f"WHEN {idx} THEN '{source}'" for idx, source in enumerate(SOURCE_SYSTEMS[:-1])
+    ]
     return "\n    ".join(
         [
             f"CASE {index_expression}",

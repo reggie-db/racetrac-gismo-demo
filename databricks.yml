@@ -7,13 +7,15 @@ include:
 artifacts:
   python_artifact:
     type: whl
-    build: uv build --wheel
+    build: uv run lfp-build dist
 
 variables:
   catalog:
     default: reggie_pierce
   schema:
     default: racetrac_gismo
+  warehouse_id:
+    default: "148ccb90800933a1"
   lakebase_schema:
     default: racetrac_gismo_serving
   pipeline_name:
@@ -34,3 +36,4 @@ targets:
     variables:
       catalog: reggie_pierce
       schema: racetrac_gismo
+      warehouse_id: "148ccb90800933a1"

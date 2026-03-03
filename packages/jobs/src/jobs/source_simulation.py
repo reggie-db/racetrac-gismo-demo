@@ -24,10 +24,18 @@ class SimulationConfig:
 
 
 def _parse_args() -> SimulationConfig:
-    parser = argparse.ArgumentParser(description="Generate synthetic source data for GISMO pipeline ingestion.")
-    parser.add_argument("--catalog", default=os.getenv("GISMO_CATALOG", DEFAULT_GISMO_CATALOG))
-    parser.add_argument("--schema", default=os.getenv("GISMO_SCHEMA", DEFAULT_GISMO_SCHEMA))
-    parser.add_argument("--warehouse-id", default=os.getenv("DATABRICKS_WAREHOUSE_ID", ""))
+    parser = argparse.ArgumentParser(
+        description="Generate synthetic source data for GISMO pipeline ingestion."
+    )
+    parser.add_argument(
+        "--catalog", default=os.getenv("GISMO_CATALOG", DEFAULT_GISMO_CATALOG)
+    )
+    parser.add_argument(
+        "--schema", default=os.getenv("GISMO_SCHEMA", DEFAULT_GISMO_SCHEMA)
+    )
+    parser.add_argument(
+        "--warehouse-id", default=os.getenv("DATABRICKS_WAREHOUSE_ID", "")
+    )
     parser.add_argument("--row-count", type=int, default=960)
     args = parser.parse_args()
     if not args.warehouse_id:
@@ -42,16 +50,28 @@ def _parse_args() -> SimulationConfig:
     )
 
 
-def _statement_ok(workspace_client: WorkspaceClient, warehouse_id: str, statement: str) -> None:
+def _statement_ok(
+    workspace_client: WorkspaceClient, warehouse_id: str, statement: str
+) -> None:
     response = workspace_client.statement_execution.execute_statement(
         warehouse_id=warehouse_id,
         statement=statement,
         wait_timeout="90s",
     )
-    state = response.status.state.value if response.status and response.status.state else "UNKNOWN"
+    state = (
+        response.status.state.value
+        if response.status and response.status.state
+        else "UNKNOWN"
+    )
     if state != "SUCCEEDED":
-        error_message = response.status.error.message if response.status and response.status.error else "Unknown SQL error."
-        raise RuntimeError(f"Source simulation SQL failed with state {state}: {error_message}")
+        error_message = (
+            response.status.error.message
+            if response.status and response.status.error
+            else "Unknown SQL error."
+        )
+        raise RuntimeError(
+            f"Source simulation SQL failed with state {state}: {error_message}"
+        )
 
 
 def _create_source_table_sql(catalog: str, schema: str) -> str:
@@ -131,7 +151,9 @@ def main() -> None:
     _statement_ok(
         workspace_client=workspace_client,
         warehouse_id=config.warehouse_id,
-        statement=_insert_source_rows_sql(config.catalog, config.schema, config.row_count),
+        statement=_insert_source_rows_sql(
+            config.catalog, config.schema, config.row_count
+        ),
     )
     LOG.info("Synthetic source data generation completed for GISMO pipeline.")
 

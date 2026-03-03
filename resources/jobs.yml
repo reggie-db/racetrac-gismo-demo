@@ -13,14 +13,12 @@ resources:
               - ${var.catalog}
               - --schema
               - ${var.schema}
-              - --warehouse-id
-              - ${var.warehouse_id}
       environments:
         - environment_key: default
           spec:
             environment_version: "4"
             dependencies:
-              - dist/*.whl
+              - ../dist/*.whl
 
     gismo_post_pipeline_ops:
       name: ${var.post_pipeline_job_name}
@@ -35,8 +33,6 @@ resources:
               - ${var.catalog}
               - --schema
               - ${var.schema}
-              - --warehouse-id
-              - ${var.warehouse_id}
 
         - task_key: sync_gold_to_lakebase
           depends_on:
@@ -57,4 +53,4 @@ resources:
           spec:
             environment_version: "4"
             dependencies:
-              - dist/*.whl
+              - ../dist/*.whl

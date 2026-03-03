@@ -1,74 +1,147 @@
 {
+  "datasets": [
+    {
+      "name": "inventory_dataset",
+      "displayName": "Inventory Health",
+      "queryLines": [
+        "SELECT market_key, terminal_id, product_id, inventory_health, inventory_units_avg, demand_units_avg, inventory_utilization_ratio",
+        "FROM reggie_pierce.racetrac_gismo.gold_inventory_visibility",
+        "ORDER BY inventory_utilization_ratio DESC",
+        "LIMIT 200"
+      ]
+    },
+    {
+      "name": "forecast_dataset",
+      "displayName": "Demand Forecast",
+      "queryLines": [
+        "SELECT market_key, product_id, ai_forecast_units, forecast_confidence, forecast_lower_bound, forecast_upper_bound",
+        "FROM reggie_pierce.racetrac_gismo.gold_demand_forecast",
+        "ORDER BY ai_forecast_units DESC",
+        "LIMIT 200"
+      ]
+    },
+    {
+      "name": "decisions_dataset",
+      "displayName": "AI Decisions",
+      "queryLines": [
+        "SELECT ai_query_action, ai_query_reason_code, COUNT(*) AS decision_count",
+        "FROM reggie_pierce.racetrac_gismo.gold_ai_query_decisions",
+        "GROUP BY ai_query_action, ai_query_reason_code",
+        "ORDER BY decision_count DESC"
+      ]
+    },
+    {
+      "name": "dispatch_dataset",
+      "displayName": "Dispatch Exposure",
+      "queryLines": [
+        "SELECT market_key, route_id, dispatch_risk_level, route_cost_exposure, freight_cost_avg, telematics_risk_avg",
+        "FROM reggie_pierce.racetrac_gismo.gold_dispatch_exposure",
+        "ORDER BY route_cost_exposure DESC",
+        "LIMIT 200"
+      ]
+    }
+  ],
   "pages": [
     {
       "name": "gismo_gold_page",
       "displayName": "GISMO Gold Overview",
       "layout": [
         {
-          "widgetName": "inventory_table_widget",
-          "position": { "x": 0, "y": 0, "width": 6, "height": 4 }
+          "widget": {
+            "name": "inventory_table_widget",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "inventory_dataset",
+                  "fields": [
+                    { "name": "market_key", "expression": "`market_key`" },
+                    { "name": "terminal_id", "expression": "`terminal_id`" },
+                    { "name": "product_id", "expression": "`product_id`" },
+                    { "name": "inventory_health", "expression": "`inventory_health`" },
+                    { "name": "inventory_units_avg", "expression": "`inventory_units_avg`" },
+                    { "name": "demand_units_avg", "expression": "`demand_units_avg`" },
+                    { "name": "inventory_utilization_ratio", "expression": "`inventory_utilization_ratio`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": { "version": 3, "widgetType": "table" }
+          },
+          "position": { "x": 0, "y": 0, "width": 6, "height": 5 }
         },
         {
-          "widgetName": "forecast_table_widget",
-          "position": { "x": 6, "y": 0, "width": 6, "height": 4 }
+          "widget": {
+            "name": "forecast_table_widget",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "forecast_dataset",
+                  "fields": [
+                    { "name": "market_key", "expression": "`market_key`" },
+                    { "name": "product_id", "expression": "`product_id`" },
+                    { "name": "ai_forecast_units", "expression": "`ai_forecast_units`" },
+                    { "name": "forecast_confidence", "expression": "`forecast_confidence`" },
+                    { "name": "forecast_lower_bound", "expression": "`forecast_lower_bound`" },
+                    { "name": "forecast_upper_bound", "expression": "`forecast_upper_bound`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": { "version": 3, "widgetType": "table" }
+          },
+          "position": { "x": 6, "y": 0, "width": 6, "height": 5 }
         },
         {
-          "widgetName": "decisions_table_widget",
-          "position": { "x": 0, "y": 4, "width": 6, "height": 4 }
+          "widget": {
+            "name": "decisions_table_widget",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "decisions_dataset",
+                  "fields": [
+                    { "name": "ai_query_action", "expression": "`ai_query_action`" },
+                    { "name": "ai_query_reason_code", "expression": "`ai_query_reason_code`" },
+                    { "name": "decision_count", "expression": "`decision_count`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": { "version": 3, "widgetType": "table" }
+          },
+          "position": { "x": 0, "y": 5, "width": 6, "height": 5 }
         },
         {
-          "widgetName": "dispatch_table_widget",
-          "position": { "x": 6, "y": 4, "width": 6, "height": 4 }
+          "widget": {
+            "name": "dispatch_table_widget",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dispatch_dataset",
+                  "fields": [
+                    { "name": "market_key", "expression": "`market_key`" },
+                    { "name": "route_id", "expression": "`route_id`" },
+                    { "name": "dispatch_risk_level", "expression": "`dispatch_risk_level`" },
+                    { "name": "route_cost_exposure", "expression": "`route_cost_exposure`" },
+                    { "name": "freight_cost_avg", "expression": "`freight_cost_avg`" },
+                    { "name": "telematics_risk_avg", "expression": "`telematics_risk_avg`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": { "version": 3, "widgetType": "table" }
+          },
+          "position": { "x": 6, "y": 5, "width": 6, "height": 5 }
         }
-      ]
-    }
-  ],
-  "datasets": [
-    {
-      "name": "inventory_dataset",
-      "displayName": "Inventory Health",
-      "query": "SELECT market_key, terminal_id, product_id, inventory_health, inventory_units_avg, demand_units_avg, inventory_utilization_ratio FROM reggie_pierce.racetrac_gismo.gold_inventory_visibility ORDER BY inventory_utilization_ratio DESC LIMIT 200"
-    },
-    {
-      "name": "forecast_dataset",
-      "displayName": "Demand Forecast",
-      "query": "SELECT market_key, product_id, ai_forecast_units, forecast_confidence, forecast_lower_bound, forecast_upper_bound FROM reggie_pierce.racetrac_gismo.gold_demand_forecast ORDER BY ai_forecast_units DESC LIMIT 200"
-    },
-    {
-      "name": "decisions_dataset",
-      "displayName": "AI Decisions",
-      "query": "SELECT ai_query_action, ai_query_reason_code, COUNT(*) AS decision_count FROM reggie_pierce.racetrac_gismo.gold_ai_query_decisions GROUP BY ai_query_action, ai_query_reason_code ORDER BY decision_count DESC"
-    },
-    {
-      "name": "dispatch_dataset",
-      "displayName": "Dispatch Exposure",
-      "query": "SELECT market_key, route_id, dispatch_risk_level, route_cost_exposure, freight_cost_avg, telematics_risk_avg FROM reggie_pierce.racetrac_gismo.gold_dispatch_exposure ORDER BY route_cost_exposure DESC LIMIT 200"
-    }
-  ],
-  "widgets": [
-    {
-      "name": "inventory_table_widget",
-      "displayName": "Inventory Health by Terminal",
-      "datasetName": "inventory_dataset",
-      "spec": { "version": 1, "widgetType": "table" }
-    },
-    {
-      "name": "forecast_table_widget",
-      "displayName": "Demand Forecast",
-      "datasetName": "forecast_dataset",
-      "spec": { "version": 1, "widgetType": "table" }
-    },
-    {
-      "name": "decisions_table_widget",
-      "displayName": "AI Query Decisions",
-      "datasetName": "decisions_dataset",
-      "spec": { "version": 1, "widgetType": "table" }
-    },
-    {
-      "name": "dispatch_table_widget",
-      "displayName": "Dispatch Exposure",
-      "datasetName": "dispatch_dataset",
-      "spec": { "version": 1, "widgetType": "table" }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     }
   ]
 }

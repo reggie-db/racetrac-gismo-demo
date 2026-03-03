@@ -7,12 +7,16 @@ resources:
       serverless: true
       continuous: false
       channel: CURRENT
-      edition: CORE
+      edition: ADVANCED
       development: true
       libraries:
-        - whl: dist/*.whl
-        - file:
-            path: ../packages/pipeline/src/pipeline/lakeflow_pipeline.py
+        - glob:
+            include: ../packages/pipeline/src/pipeline/**
+      environment:
+        dependencies:
+          # We include every dependency defined by pyproject.toml by defining an editable environment
+          # that points to the folder where pyproject.toml is deployed.
+          - --editable ${workspace.file_path}
       configuration:
         gismo.catalog: ${var.catalog}
         gismo.schema: ${var.schema}

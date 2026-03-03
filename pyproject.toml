@@ -32,8 +32,8 @@ default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
-uvr = "uv run "
-uvm = "uv run -m "
+uvr = "uv run"
+uvm = "uv run -m"
 deploy-genie = "uv run --project packages/pipeline python scripts/deploy_genie.py"
 apply-gismo-metadata = "uv run --project packages/pipeline -m pipeline.metadata"
 sync-gold-lakebase = "uv run --project packages/pipeline -m pipeline.lakebase_sync"
