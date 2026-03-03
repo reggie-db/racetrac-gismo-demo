@@ -1,0 +1,60 @@
+resources:
+  jobs:
+    gismo_source_simulation:
+      name: ${var.source_sim_job_name}
+      tasks:
+        - task_key: generate_source_signals
+          environment_key: default
+          python_wheel_task:
+            package_name: jobs
+            entry_point: gismo-generate-source-data
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --warehouse-id
+              - ${var.warehouse_id}
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - dist/*.whl
+
+    gismo_post_pipeline_ops:
+      name: ${var.post_pipeline_job_name}
+      tasks:
+        - task_key: apply_metadata_comments
+          environment_key: default
+          python_wheel_task:
+            package_name: pipeline
+            entry_point: gismo-apply-metadata
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --warehouse-id
+              - ${var.warehouse_id}
+
+        - task_key: sync_gold_to_lakebase
+          depends_on:
+            - task_key: apply_metadata_comments
+          environment_key: default
+          python_wheel_task:
+            package_name: pipeline
+            entry_point: gismo-sync-lakebase
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --lakebase-schema
+              - ${var.lakebase_schema}
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - dist/*.whl

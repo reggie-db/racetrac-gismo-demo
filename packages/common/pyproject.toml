@@ -1,0 +1,12 @@
+[build-system]
+requires = ["uv_build>=0.9.6,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "common"
+version = "0.0.1"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "lfp-logging @ git+https://github.com/regbo/lfp-logging-py.git",
+    "dbx-tools @ git+https://github.com/reggie-db/reggie-bricks-py.git#subdirectory=dbx-tools",
+]

@@ -1,0 +1,74 @@
+{
+  "pages": [
+    {
+      "name": "gismo_gold_page",
+      "displayName": "GISMO Gold Overview",
+      "layout": [
+        {
+          "widgetName": "inventory_table_widget",
+          "position": { "x": 0, "y": 0, "width": 6, "height": 4 }
+        },
+        {
+          "widgetName": "forecast_table_widget",
+          "position": { "x": 6, "y": 0, "width": 6, "height": 4 }
+        },
+        {
+          "widgetName": "decisions_table_widget",
+          "position": { "x": 0, "y": 4, "width": 6, "height": 4 }
+        },
+        {
+          "widgetName": "dispatch_table_widget",
+          "position": { "x": 6, "y": 4, "width": 6, "height": 4 }
+        }
+      ]
+    }
+  ],
+  "datasets": [
+    {
+      "name": "inventory_dataset",
+      "displayName": "Inventory Health",
+      "query": "SELECT market_key, terminal_id, product_id, inventory_health, inventory_units_avg, demand_units_avg, inventory_utilization_ratio FROM reggie_pierce.racetrac_gismo.gold_inventory_visibility ORDER BY inventory_utilization_ratio DESC LIMIT 200"
+    },
+    {
+      "name": "forecast_dataset",
+      "displayName": "Demand Forecast",
+      "query": "SELECT market_key, product_id, ai_forecast_units, forecast_confidence, forecast_lower_bound, forecast_upper_bound FROM reggie_pierce.racetrac_gismo.gold_demand_forecast ORDER BY ai_forecast_units DESC LIMIT 200"
+    },
+    {
+      "name": "decisions_dataset",
+      "displayName": "AI Decisions",
+      "query": "SELECT ai_query_action, ai_query_reason_code, COUNT(*) AS decision_count FROM reggie_pierce.racetrac_gismo.gold_ai_query_decisions GROUP BY ai_query_action, ai_query_reason_code ORDER BY decision_count DESC"
+    },
+    {
+      "name": "dispatch_dataset",
+      "displayName": "Dispatch Exposure",
+      "query": "SELECT market_key, route_id, dispatch_risk_level, route_cost_exposure, freight_cost_avg, telematics_risk_avg FROM reggie_pierce.racetrac_gismo.gold_dispatch_exposure ORDER BY route_cost_exposure DESC LIMIT 200"
+    }
+  ],
+  "widgets": [
+    {
+      "name": "inventory_table_widget",
+      "displayName": "Inventory Health by Terminal",
+      "datasetName": "inventory_dataset",
+      "spec": { "version": 1, "widgetType": "table" }
+    },
+    {
+      "name": "forecast_table_widget",
+      "displayName": "Demand Forecast",
+      "datasetName": "forecast_dataset",
+      "spec": { "version": 1, "widgetType": "table" }
+    },
+    {
+      "name": "decisions_table_widget",
+      "displayName": "AI Query Decisions",
+      "datasetName": "decisions_dataset",
+      "spec": { "version": 1, "widgetType": "table" }
+    },
+    {
+      "name": "dispatch_table_widget",
+      "displayName": "Dispatch Exposure",
+      "datasetName": "dispatch_dataset",
+      "spec": { "version": 1, "widgetType": "table" }
+    }
+  ]
+}

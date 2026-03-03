@@ -1,0 +1,18 @@
+[build-system]
+requires = ["uv_build>=0.9.6,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "jobs"
+version = "0.0.1"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "common @ file://${PROJECT_ROOT}/../common",
+    "databricks-sdk>=0.63.0",
+]
+
+[project.scripts]
+gismo-generate-source-data = "jobs.source_simulation:main"
+
+[tool.uv.sources.common]
+workspace = true

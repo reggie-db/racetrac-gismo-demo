@@ -1,0 +1,8 @@
+resources:
+  dashboards:
+    gismo_gold_dashboard:
+      display_name: ${var.dashboard_name}
+      file_path: ../packages/dashboard/assets/gismo_gold_overview.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.schema}

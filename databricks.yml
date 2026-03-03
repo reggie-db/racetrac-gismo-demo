@@ -1,0 +1,36 @@
+bundle:
+  name: racetrac-gismo-demo
+
+include:
+  - resources/*.yml
+
+artifacts:
+  python_artifact:
+    type: whl
+    build: uv build --wheel
+
+variables:
+  catalog:
+    default: reggie_pierce
+  schema:
+    default: racetrac_gismo
+  lakebase_schema:
+    default: racetrac_gismo_serving
+  pipeline_name:
+    default: gismo-lakeflow-pipeline
+  post_pipeline_job_name:
+    default: gismo-post-pipeline-ops
+  source_sim_job_name:
+    default: gismo-source-simulation
+  dashboard_name:
+    default: gismo-gold-operations-dashboard
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      profile: DEFAULT
+    variables:
+      catalog: reggie_pierce
+      schema: racetrac_gismo

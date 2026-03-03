@@ -1,0 +1,41 @@
+[build-system]
+requires = ["uv_build>=0.9.6,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "uv",
+    "pytest",
+    "lfp-build @ git+https://github.com/regbo/lfp-build-py.git",
+]
+
+[tool.member-project]
+project.requires-python = ">=3.12,<3.13"
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.pixi.workspace]
+name = "gismo-demo"
+channels = ["conda-forge", "https://prefix.dev/regbo"]
+platforms = [
+    "linux-64",
+    "linux-aarch64",
+    "osx-64",
+    "osx-arm64",
+    "win-64",
+    "win-arm64",
+]
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+
+[tool.pixi.tasks]
+uvr = "uv run "
+uvm = "uv run -m "
+deploy-genie = "uv run --project packages/pipeline python scripts/deploy_genie.py"
+apply-gismo-metadata = "uv run --project packages/pipeline -m pipeline.metadata"
+sync-gold-lakebase = "uv run --project packages/pipeline -m pipeline.lakebase_sync"
+generate-source-data = "uv run --project packages/jobs -m jobs.source_simulation"
+deploy-gold-dashboard = "databricks bundle run gismo_gold_dashboard -t dev"

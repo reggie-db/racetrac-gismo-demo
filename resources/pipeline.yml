@@ -1,0 +1,18 @@
+resources:
+  pipelines:
+    gismo_lakeflow_pipeline:
+      name: ${var.pipeline_name}
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      serverless: true
+      continuous: false
+      channel: CURRENT
+      edition: CORE
+      development: true
+      libraries:
+        - whl: dist/*.whl
+        - file:
+            path: ../packages/pipeline/src/pipeline/lakeflow_pipeline.py
+      configuration:
+        gismo.catalog: ${var.catalog}
+        gismo.schema: ${var.schema}
