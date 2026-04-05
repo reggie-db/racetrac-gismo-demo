@@ -7,7 +7,7 @@ from databricks.sdk import WorkspaceClient
 from dbx_tools import clients
 from lfp_logging import logs
 
-from pipeline.constants import BRONZE_TABLES, GOLD_TABLES, SILVER_TABLES
+from pipeline.constants import GOLD_TABLES, SILVER_TABLES
 
 # Metadata tooling for adding table and column descriptions for Genie readiness.
 
@@ -195,7 +195,9 @@ COLUMN_DESCRIPTIONS: dict[str, dict[str, str]] = {
 
 
 def _all_table_names() -> Sequence[str]:
-    return (*BRONZE_TABLES, *SILVER_TABLES, *GOLD_TABLES)
+    # Streaming tables do not support COMMENT ON operations in SQL warehouses.
+    # We apply metadata to silver and gold tables that power semantic querying.
+    return (*SILVER_TABLES, *GOLD_TABLES)
 
 
 def _escape_sql_comment(comment_text: str) -> str:

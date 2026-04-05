@@ -1,30 +1,39 @@
 # RaceTrac GISMO Databricks Demo
 
-This repository demonstrates how RaceTrac GISMO can be implemented as a Databricks-first abstraction layer:
+This repo demonstrates a Databricks-first path to modernize RaceTrac fuel operations without a risky monolith rewrite. It focuses on a fast, incremental foundation:
 
-- Mocked operational source signals for all adjacent systems in the target architecture.
-- A serverless Lakeflow Declarative Pipeline that builds bronze, silver, and gold layers.
-- AI forecast and criteria-driven AI query decision outputs.
-- Gold table synchronization into Lakebase serving tables.
-- Rich table and column metadata for Genie.
-- Local Genie provisioning with `pixi run deploy-genie`.
+- Synthetic operational signals modeled after Salesforce, RightAngle, FuelOpt outputs, DTN, PC Miler, terminals, weather, payroll, and related systems.
+- A serverless Lakeflow Declarative Pipeline with streaming bronze ingest and medallion transforms.
+- AI-style forecasting and explainability outputs for planner and dispatch decisions.
+- Gold serving sync into Lakebase for low-latency operational access.
+- Semantic metadata and Genie space provisioning for natural language exploration.
 
-## Repo Structure
+## Why This Demo Exists
 
-- `packages/common`: existing shared package.
-- `packages/pipeline`: GISMO pipeline package with Lakeflow, metadata, and Lakebase sync logic.
-- `packages/jobs`: GISMO job package for synthetic source simulation.
-- `packages/dashboard`: dashboard package with reusable gold-layer SQL query definitions and Lakeview asset.
-- `resources/`: Databricks Asset Bundle pipeline and job resources.
-- `scripts/deploy_genie.py`: local script to create or update a Genie space.
-- `databricks.yml`: bundle root configuration.
+RaceTrac has inventory visibility gaps, low planner explainability, fragmented reporting, and tightly coupled logic across many systems. This demo shows how Databricks can become the data and intelligence abstraction layer first, then support phased app and agent rollout later.
 
-## Data Layers
+## Architecture
+
+1. **Source simulation job** writes append-only dummy events to `source_operational_signals`.
+2. **Lakeflow pipeline** reads that source as a stream and builds bronze, silver, and gold layers.
+3. **AI and explainability logic** creates forecast outputs and transparent decision signals.
+4. **Post-pipeline job** applies semantic metadata and syncs gold to Lakebase.
+5. **Genie deployment** exposes curated gold tables for conversational analytics.
+
+## Project Layout
+
+- `packages/common`: Shared GISMO constants and SQL helpers.
+- `packages/jobs`: Synthetic source generation job.
+- `packages/pipeline`: Lakeflow pipeline, metadata application, and Lakebase sync.
+- `packages/dashboard`: Lakeview dashboard assets over gold tables.
+- `resources/`: Databricks Asset Bundle resources (jobs, pipeline, dashboard).
+- `scripts/deploy_genie.py`: Genie provisioning script.
+
+## Data Model
 
 ### Bronze
 
-- `bronze_operational_signals`
-  - Mocked events from Salesforce, PDI/RightAngle, MarketView, Gurobi, terminals, MDM, PC Miler, Veeder Root/Sticks, payroll/workday, DTN/ADS, weather feeds, and Samsara.
+- `bronze_operational_signals`: Streaming ingestion of synthetic events across upstream source systems.
 
 ### Silver
 
@@ -36,80 +45,106 @@ This repository demonstrates how RaceTrac GISMO can be implemented as a Databric
 
 - `gold_inventory_visibility`
 - `gold_planner_explainability`
-- `gold_demand_forecast` (AI forecast demo)
+- `gold_demand_forecast`
 - `gold_dispatch_exposure`
 - `gold_sales_context`
-- `gold_ai_query_decisions` (AI query criteria and reason codes)
+- `gold_ai_query_decisions`
 
-## Bundle Deployment
+## Quick Start
 
-1. Build and validate:
+1) Build artifacts:
 
-   ```bash
-   uv build --wheel
-   databricks bundle validate
-   ```
+```bash
+uv build --wheel
+```
 
-2. Deploy:
+2) Validate and deploy bundle:
 
-   ```bash
-   databricks bundle deploy -t dev
-   ```
+```bash
+databricks bundle validate -t dev
+databricks bundle deploy -t dev
+```
 
-3. Run the Lakeflow pipeline:
+3) Generate synthetic source events:
 
-   ```bash
-   databricks bundle run gismo_source_simulation -t dev
-   databricks bundle run gismo_lakeflow_pipeline -t dev
-   ```
+```bash
+databricks bundle run gismo_source_simulation -t dev
+```
 
-4. Run post-pipeline metadata and Lakebase sync job:
+4) Run Lakeflow pipeline:
 
-   ```bash
-   databricks bundle run gismo_post_pipeline_ops -t dev
-   ```
+```bash
+databricks bundle run gismo_lakeflow_pipeline -t dev
+```
 
-5. Deploy dashboard:
+5) Run post-pipeline operations:
 
-   ```bash
-   databricks bundle run gismo_gold_dashboard -t dev
-   ```
+```bash
+databricks bundle run gismo_post_pipeline_ops -t dev
+```
 
-## Lakebase Requirements
-
-The Lakebase sync job expects:
-
-- `LAKEBASE_DSN` available in job environment or task context.
-- Databricks SQL connection values:
-  - `DATABRICKS_SERVER_HOSTNAME`
-  - `DATABRICKS_HTTP_PATH`
-  - `DATABRICKS_TOKEN`
-
-Gold tables are copied into Lakebase schema `racetrac_gismo_serving` by default and validated with:
-
-- Source vs target row counts.
-- Distinct key integrity checks per serving table.
-
-## Metadata and Genie
-
-Table and column comments are managed by `pipeline.metadata` and include operator-friendly descriptions for semantic querying.
-
-Create or update the Genie space locally with:
+6) Deploy Genie:
 
 ```bash
 pixi run deploy-genie
 ```
 
-Generate synthetic source-system rows locally with:
+7) Deploy dashboard:
 
 ```bash
-pixi run generate-source-data
+databricks bundle run gismo_gold_dashboard -t dev
 ```
 
-Deploy the gold-layer dashboard with:
+## Source Simulation Controls
+
+`gismo_source_simulation` supports configurable demo volume and cadence:
+
+- `row_count` (default `960`)
+- `hour_window` (default `72`)
+- `batch_tag` (default `demo`)
+
+These are configured as Databricks job parameters in the bundle resource.
+
+## Lakebase Sync Requirements
+
+Lakebase sync is intentionally strict-fail for safe operations. You must provide a DSN:
+
+- Environment variable for the post-pipeline task: `LAKEBASE_DSN`
+- Example:
 
 ```bash
-pixi run deploy-gold-dashboard
+export LAKEBASE_DSN="postgresql://<user>:<pass>@<host>:5432/<db>?sslmode=require"
+databricks bundle deploy -t dev
 ```
 
-The script targets `reggie_pierce.racetrac_gismo` by default and registers all gold tables plus sample questions.
+Gold sync validates:
+
+- Source vs Lakebase row counts
+- Distinct business-key counts per serving table
+
+## Validation Queries
+
+```sql
+SELECT source_system, COUNT(*) AS row_count
+FROM reggie_pierce.racetrac_gismo.bronze_operational_signals
+GROUP BY source_system
+ORDER BY source_system;
+```
+
+```sql
+SELECT market_key, product_id, ai_forecast_units, forecast_confidence
+FROM reggie_pierce.racetrac_gismo.gold_demand_forecast
+ORDER BY ai_forecast_units DESC
+LIMIT 20;
+```
+
+```sql
+SELECT ai_query_action, ai_query_reason_code, COUNT(*) AS decision_count
+FROM reggie_pierce.racetrac_gismo.gold_ai_query_decisions
+GROUP BY ai_query_action, ai_query_reason_code
+ORDER BY decision_count DESC;
+```
+
+## Roadmap Fit
+
+This repo is intentionally structured so a Databricks App can be added later as the GISMO UI layer, while keeping ingestion, forecasting, explainability, and semantic serving independent and modular.

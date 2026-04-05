@@ -3,10 +3,13 @@ requires = ["uv_build>=0.9.6,<0.10.0"]
 build-backend = "uv_build"
 
 [project]
-name = "dashboard"
+name = "app"
 version = "0.0.1+gf918634"
 requires-python = ">=3.12,<3.13"
-dependencies = ["common @ file://${PROJECT_ROOT}/../common"]
+dependencies = [
+    "common @ file://${PROJECT_ROOT}/../common",
+    "dbx-tools @ git+https://github.com/reggie-db/reggie-bricks-py.git#subdirectory=dbx-tools",
+]
 
 [tool.uv.sources.common]
 workspace = true

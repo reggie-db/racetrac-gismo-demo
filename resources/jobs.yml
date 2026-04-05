@@ -2,6 +2,13 @@ resources:
   jobs:
     gismo_source_simulation:
       name: ${var.source_sim_job_name}
+      parameters:
+        - name: row_count
+          default: "960"
+        - name: hour_window
+          default: "72"
+        - name: batch_tag
+          default: "demo"
       tasks:
         - task_key: generate_source_signals
           environment_key: default
@@ -13,6 +20,12 @@ resources:
               - ${var.catalog}
               - --schema
               - ${var.schema}
+              - --row-count
+              - "{{job.parameters.row_count}}"
+              - --hour-window
+              - "{{job.parameters.hour_window}}"
+              - --batch-tag
+              - "{{job.parameters.batch_tag}}"
       environments:
         - environment_key: default
           spec:

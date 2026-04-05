@@ -1,7 +1,6 @@
 import argparse
 import os
 from collections.abc import Iterable, Sequence
-from contextlib import closing
 
 import psycopg
 from common.gismo import (
@@ -9,7 +8,8 @@ from common.gismo import (
     DEFAULT_GISMO_SCHEMA,
     DEFAULT_LAKEBASE_SCHEMA,
 )
-from databricks import sql as dbsql
+from databricks.sdk import WorkspaceClient
+from dbx_tools import clients
 from lfp_logging import logs
 from psycopg import sql as psql
 
@@ -44,13 +44,6 @@ def _parse_args() -> argparse.Namespace:
         default=os.getenv("LAKEBASE_SCHEMA", DEFAULT_LAKEBASE_SCHEMA),
     )
     parser.add_argument("--lakebase-dsn", default=os.getenv("LAKEBASE_DSN"))
-    parser.add_argument(
-        "--warehouse-host", default=os.getenv("DATABRICKS_SERVER_HOSTNAME")
-    )
-    parser.add_argument(
-        "--warehouse-http-path", default=os.getenv("DATABRICKS_HTTP_PATH")
-    )
-    parser.add_argument("--warehouse-token", default=os.getenv("DATABRICKS_TOKEN"))
     return parser.parse_args()
 
 
@@ -69,17 +62,98 @@ def _map_type(type_code: object) -> str:
     return "TEXT"
 
 
+def _statement_ok(workspace_client: WorkspaceClient, warehouse_id: str, statement: str):
+    result = workspace_client.statement_execution.execute_statement(
+        warehouse_id=warehouse_id,
+        statement=statement,
+        wait_timeout="50s",
+    )
+    state = (
+        result.status.state.value
+        if result.status and result.status.state
+        else "UNKNOWN"
+    )
+    if state != "SUCCEEDED":
+        error_message = (
+            result.status.error.message
+            if result.status and result.status.error
+            else "Unknown SQL error."
+        )
+        raise RuntimeError(
+            f"Lakebase sync SQL failed with state {state}: {error_message}"
+        )
+    return result
+
+
+def _table_schema(
+    workspace_client: WorkspaceClient,
+    warehouse_id: str,
+    catalog: str,
+    schema: str,
+    table_name: str,
+) -> tuple[list[str], list[str]]:
+    describe_result = _statement_ok(
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
+        statement=f"DESCRIBE TABLE `{catalog}`.`{schema}`.`{table_name}`",
+    )
+    rows = describe_result.result.data_array if describe_result.result else []
+    column_names: list[str] = []
+    column_types: list[str] = []
+    for row in rows or []:
+        if not row:
+            continue
+        raw_column_name = str(row[0]).strip()
+        if not raw_column_name or raw_column_name.startswith("#"):
+            continue
+        column_names.append(raw_column_name)
+        column_types.append(str(row[1]))
+    return column_names, column_types
+
+
+def _table_rows(
+    workspace_client: WorkspaceClient,
+    warehouse_id: str,
+    catalog: str,
+    schema: str,
+    table_name: str,
+) -> list[tuple[object, ...]]:
+    query_result = _statement_ok(
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
+        statement=f"SELECT * FROM `{catalog}`.`{schema}`.`{table_name}`",
+    )
+    rows = query_result.result.data_array if query_result.result else []
+    return [tuple(row) for row in (rows or [])]
+
+
+def _warehouse_scalar_count(
+    workspace_client: WorkspaceClient,
+    warehouse_id: str,
+    statement: str,
+) -> int:
+    result = _statement_ok(
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
+        statement=statement,
+    )
+    rows = result.result.data_array if result.result else []
+    if not rows or not rows[0]:
+        return 0
+    return int(rows[0][0])
+
+
 def _create_target_table(
     pg_conn: psycopg.Connection,
     lakebase_schema: str,
     table_name: str,
-    cursor_description: Sequence[tuple[object, ...]],
+    column_names: Sequence[str],
+    column_types: Sequence[str],
 ) -> None:
     identifier_list = [psql.Identifier(lakebase_schema), psql.Identifier(table_name)]
     column_parts: list[psql.Composable] = []
-    for column in cursor_description:
-        column_name = str(column[0])
-        column_type = _map_type(column[1])
+    for column_name, source_type in zip(column_names, column_types, strict=True):
+        column_type = _map_type(source_type)
         column_parts.append(
             psql.SQL("{} {}").format(
                 psql.Identifier(column_name), psql.SQL(column_type)
@@ -125,14 +199,18 @@ def _insert_rows(
 
 
 def _warehouse_row_count(
-    warehouse_cursor: dbsql.client.Cursor, catalog: str, schema: str, table_name: str
+    workspace_client: WorkspaceClient,
+    warehouse_id: str,
+    catalog: str,
+    schema: str,
+    table_name: str,
 ) -> int:
     fully_qualified_name = f"`{catalog}`.`{schema}`.`{table_name}`"
-    warehouse_cursor.execute(
-        f"SELECT COUNT(*) AS row_count FROM {fully_qualified_name}"
+    return _warehouse_scalar_count(
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
+        statement=f"SELECT COUNT(*) AS row_count FROM {fully_qualified_name}",
     )
-    row = warehouse_cursor.fetchone()
-    return int(row[0]) if row else 0
 
 
 def _lakebase_row_count(
@@ -150,7 +228,8 @@ def _lakebase_row_count(
 
 
 def _warehouse_distinct_key_count(
-    warehouse_cursor: dbsql.client.Cursor,
+    workspace_client: WorkspaceClient,
+    warehouse_id: str,
     catalog: str,
     schema: str,
     table_name: str,
@@ -158,11 +237,11 @@ def _warehouse_distinct_key_count(
 ) -> int:
     fully_qualified_name = f"`{catalog}`.`{schema}`.`{table_name}`"
     distinct_columns = ", ".join(f"`{column}`" for column in key_columns)
-    warehouse_cursor.execute(
-        f"SELECT COUNT(*) FROM (SELECT DISTINCT {distinct_columns} FROM {fully_qualified_name}) key_rows",
+    return _warehouse_scalar_count(
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
+        statement=f"SELECT COUNT(*) FROM (SELECT DISTINCT {distinct_columns} FROM {fully_qualified_name}) key_rows",
     )
-    row = warehouse_cursor.fetchone()
-    return int(row[0]) if row else 0
 
 
 def _lakebase_distinct_key_count(
@@ -188,18 +267,29 @@ def _lakebase_distinct_key_count(
 
 
 def _sync_table(
-    warehouse_cursor: dbsql.client.Cursor,
+    workspace_client: WorkspaceClient,
+    warehouse_id: str,
     pg_conn: psycopg.Connection,
     catalog: str,
     schema: str,
     lakebase_schema: str,
     table_name: str,
 ) -> None:
-    fully_qualified_name = f"`{catalog}`.`{schema}`.`{table_name}`"
-    warehouse_cursor.execute(f"SELECT * FROM {fully_qualified_name}")
-    rows = warehouse_cursor.fetchall()
-    description = warehouse_cursor.description or []
-    if not description:
+    column_names, column_types = _table_schema(
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
+        catalog=catalog,
+        schema=schema,
+        table_name=table_name,
+    )
+    rows = _table_rows(
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
+        catalog=catalog,
+        schema=schema,
+        table_name=table_name,
+    )
+    if not column_names:
         LOG.warning("Skipping Lakebase sync for table with no description metadata.")
         return
 
@@ -207,9 +297,9 @@ def _sync_table(
         pg_conn=pg_conn,
         lakebase_schema=lakebase_schema,
         table_name=table_name,
-        cursor_description=description,
+        column_names=column_names,
+        column_types=column_types,
     )
-    column_names = [str(column[0]) for column in description]
     _insert_rows(
         pg_conn=pg_conn,
         lakebase_schema=lakebase_schema,
@@ -219,7 +309,8 @@ def _sync_table(
     )
     pg_conn.commit()
     warehouse_count = _warehouse_row_count(
-        warehouse_cursor=warehouse_cursor,
+        workspace_client=workspace_client,
+        warehouse_id=warehouse_id,
         catalog=catalog,
         schema=schema,
         table_name=table_name,
@@ -237,7 +328,8 @@ def _sync_table(
     key_columns = TABLE_KEY_COLUMNS.get(table_name)
     if key_columns:
         warehouse_distinct_count = _warehouse_distinct_key_count(
-            warehouse_cursor=warehouse_cursor,
+            workspace_client=workspace_client,
+            warehouse_id=warehouse_id,
             catalog=catalog,
             schema=schema,
             table_name=table_name,
@@ -260,39 +352,23 @@ def _sync_table(
 
 def main() -> None:
     args = _parse_args()
-    missing = [
-        name
-        for name, value in (
-            ("lakebase-dsn", args.lakebase_dsn),
-            ("warehouse-host", args.warehouse_host),
-            ("warehouse-http-path", args.warehouse_http_path),
-            ("warehouse-token", args.warehouse_token),
-        )
-        if not value
-    ]
-    if missing:
+    if not args.lakebase_dsn:
         raise ValueError(
-            f"Missing required arguments or environment variables: {', '.join(missing)}"
+            "Missing required arguments or environment variables: lakebase-dsn"
         )
-
-    with closing(
-        dbsql.connect(
-            server_hostname=args.warehouse_host,
-            http_path=args.warehouse_http_path,
-            access_token=args.warehouse_token,
-        )
-    ) as warehouse_conn:
-        with closing(warehouse_conn.cursor()) as warehouse_cursor:
-            with psycopg.connect(args.lakebase_dsn) as pg_conn:
-                for table_name in GOLD_TABLES:
-                    _sync_table(
-                        warehouse_cursor=warehouse_cursor,
-                        pg_conn=pg_conn,
-                        catalog=args.catalog,
-                        schema=args.schema,
-                        lakebase_schema=args.lakebase_schema,
-                        table_name=table_name,
-                    )
+    workspace_client = WorkspaceClient()
+    warehouse_id = str(clients.warehouse(workspace_client).id)
+    with psycopg.connect(args.lakebase_dsn) as pg_conn:
+        for table_name in GOLD_TABLES:
+            _sync_table(
+                workspace_client=workspace_client,
+                warehouse_id=warehouse_id,
+                pg_conn=pg_conn,
+                catalog=args.catalog,
+                schema=args.schema,
+                lakebase_schema=args.lakebase_schema,
+                table_name=table_name,
+            )
     LOG.info("Completed Lakebase synchronization for all gold tables.")
 
 

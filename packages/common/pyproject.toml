@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "common"
-version = "0.0.1+g07f50b3"
+version = "0.0.1+gf918634"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "lfp-logging @ git+https://github.com/regbo/lfp-logging-py.git",

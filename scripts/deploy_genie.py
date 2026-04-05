@@ -1,9 +1,11 @@
 import argparse
+import json
 import os
 from collections.abc import Sequence
 
 from common.gismo import DEFAULT_GISMO_CATALOG, DEFAULT_GISMO_SCHEMA, GOLD_TABLES
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors.platform import PermissionDenied
 from dbx_tools import clients
 from lfp_logging import logs
 
@@ -47,7 +49,10 @@ def _find_existing_space_id(
 ) -> str | None:
     response = workspace_client.api_client.do("GET", "/api/2.0/genie/spaces")
     for space in response.get("spaces", []):
-        if space.get("display_name") == display_name:
+        if (
+            space.get("display_name") == display_name
+            or space.get("title") == display_name
+        ):
             return str(space.get("id"))
     return None
 
@@ -64,6 +69,14 @@ def _payload(args: argparse.Namespace) -> dict[str, object]:
     return payload
 
 
+def _create_payload(args: argparse.Namespace, warehouse_id: str) -> dict[str, object]:
+    payload = _payload(args)
+    payload["warehouse_id"] = warehouse_id
+    # Genie create now requires serialized_space; version 2 is the minimum valid payload.
+    payload["serialized_space"] = json.dumps({"version": 2})
+    return payload
+
+
 def main() -> None:
     args = _parse_args()
     workspace_client = WorkspaceClient()
@@ -71,18 +84,32 @@ def main() -> None:
     existing_space_id = _find_existing_space_id(
         workspace_client=workspace_client, display_name=GENIE_DISPLAY_NAME
     )
-    payload = _payload(args)
-    payload["warehouse_id"] = warehouse_id
-
     if existing_space_id:
-        workspace_client.api_client.do(
-            "PATCH",
-            f"/api/2.0/genie/spaces/{existing_space_id}",
-            body=payload,
-        )
-        LOG.info("Updated existing GISMO Genie space.")
+        payload = _payload(args)
+        payload["warehouse_id"] = warehouse_id
+        try:
+            workspace_client.api_client.do(
+                "PATCH",
+                f"/api/2.0/genie/spaces/{existing_space_id}",
+                body=payload,
+            )
+            LOG.info("Updated existing GISMO Genie space.")
+        except PermissionDenied:
+            # If the existing shared space is not editable, create a user-owned demo clone.
+            clone_payload = _create_payload(args, warehouse_id)
+            clone_payload["display_name"] = f"{GENIE_DISPLAY_NAME} Demo"
+            workspace_client.api_client.do(
+                "POST",
+                "/api/2.0/genie/spaces",
+                body=clone_payload,
+            )
+            LOG.info("Created user-owned GISMO Genie demo space.")
     else:
-        workspace_client.api_client.do("POST", "/api/2.0/genie/spaces", body=payload)
+        workspace_client.api_client.do(
+            "POST",
+            "/api/2.0/genie/spaces",
+            body=_create_payload(args, warehouse_id),
+        )
         LOG.info("Created new GISMO Genie space.")
 
 

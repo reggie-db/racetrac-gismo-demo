@@ -21,7 +21,10 @@ def _source_table_name() -> str:
 )
 @dlt.expect_or_drop("valid_source_system", "source_system IS NOT NULL")
 def bronze_operational_signals() -> DataFrame:
-    return spark.read.table(_source_table_name())
+    # Treat synthetic source events as an append stream for intraday inventory demos.
+    return spark.readStream.option("skipChangeCommits", "true").table(
+        _source_table_name()
+    )
 
 
 @dlt.table(
@@ -139,8 +142,31 @@ def gold_inventory_visibility() -> DataFrame:
 def gold_planner_explainability() -> DataFrame:
     inventory_df = dlt.read("silver_inventory_state")
     demand_df = dlt.read("silver_demand_drivers")
+    inventory_alias = inventory_df.alias("inventory")
+    demand_alias = demand_df.alias("demand")
     return (
-        inventory_df.join(demand_df, on=["market_key", "product_id"], how="inner")
+        inventory_alias.join(
+            demand_alias,
+            on=["market_key", "product_id"],
+            how="inner",
+        )
+        .select(
+            "market_key",
+            "product_id",
+            "terminal_id",
+            "as_of_ts",
+            "inventory_units_avg",
+            "inventory_units_peak",
+            "warning_signal_count",
+            "demand_units_avg",
+            F.col("inventory.retail_price_avg").alias("retail_price_avg"),
+            F.col("inventory.wholesale_cost_avg").alias("wholesale_cost_avg"),
+            "inventory_gap_units",
+            "baseline_demand_units",
+            F.col("demand.weather_index_avg").alias("weather_index_avg"),
+            "price_spread",
+            "planner_override_count",
+        )
         .withColumn(
             "inventory_pressure_score",
             F.round(F.col("inventory_gap_units") / F.col("inventory_units_avg"), 4),
